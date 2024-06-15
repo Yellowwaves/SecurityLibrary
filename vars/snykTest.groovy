@@ -1,13 +1,11 @@
 #!/usr/bin/env groovy
 
+// vars/snykTest.groovy
+
 def call() {
-    stage('Snyk test') {
-        steps {
-            echo 'Testing...'
-            snykSecurity(
-                snykInstallation: 'snyksec',
-                snykTokenId: 'snyk-api-key'
-            )
-        }
-    }
+    echo 'Testing...'
+    snykSecurity(
+        snykInstallation: 'snyksec',
+        snykTokenId: 'snyk-api-key'
+    )
 }
