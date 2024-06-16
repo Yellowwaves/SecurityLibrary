@@ -7,6 +7,6 @@ def call() {
     snykSecurity(
         snykInstallation: 'snyksec',
         snykTokenId: 'snyk-api-key',
-        targetFile: 'snyk_report.json'
+        additionalArguments: '--json',
     )
 }
