@@ -6,6 +6,8 @@ def call() {
     echo 'Testing...'
     snykSecurity(
         snykInstallation: 'snyksec',
-        snykTokenId: 'snyk-api-key'
+        snykTokenId: 'snyk-api-key',
+        additionalArguments: '--json-file-output=snyk_report.json',
+        archiveArtifacts artifacts: 'snyk_report.json', allowEmptyArchive: true
     )
 }
