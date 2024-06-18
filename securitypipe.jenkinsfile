@@ -1,0 +1,139 @@
+@Library('scan_script') _
+
+def scan_type
+def target
+
+pipeline {
+    agent any
+    parameters {
+        choice(choices: ['Baseline', 'APIS', 'Full'], description: 'Type de scan à effectuer', name: 'SCAN_TYPE')
+        string(defaultValue: 'https://example.com/', description: 'URL cible à scanner', name: 'TARGET')
+        string(defaultValue: 'token-api', description: 'Token API DefectDojo', name: 'DOJO_API_TOKEN')
+        string(defaultValue: 'http://192.168.140.130:8080/api/v2/', description: 'URL de base de l\'API DefectDojo', name: 'DOJO_API_URL')
+        string(defaultValue: '3', description: 'ID de l\'engagement dans DefectDojo', name: 'ENGAGEMENT_ID')
+        string(defaultValue: 'https://github.com/Yellowwaves/testSecurityPipe.git', description: 'GitHub repository URL to checkout', name: 'GIT_URL')
+    }
+    stages {
+        stage('Infos Pipeline') {
+            steps {
+                script {
+                    echo '<-- Initialisation des paramètres -->'
+                    echo "Type de scan: ${params.SCAN_TYPE}"
+                    echo "Cible: ${params.TARGET}"
+                    echo "Token API DefectDojo: ${params.DOJO_API_TOKEN}"
+                    echo "URL API DefectDojo: ${params.DOJO_API_URL}"
+                    echo "ID de l'engagement: ${params.ENGAGEMENT_ID}"
+                }
+            }
+        }
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: "${params.GIT_URL}", credentialsId: 'your-credentials-id'
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+        stage('Snyk test') {
+            steps {
+                //snykTest()
+                sh 'echo snyk'
+            }
+        }
+        stage('Setting up OWASP ZAP docker container') {
+            steps {
+                script {
+                    echo 'Pulling up latest OWASP ZAP container --> Start'
+                    sh 'docker pull ictu/zap2docker-weekly'
+                    echo 'Pulling up latest OWASP ZAP container --> End'
+                    echo 'Starting container --> Start'
+                    sh 'docker run -dt --name owasp ictu/zap2docker-weekly /bin/bash'
+                }
+            }
+        }
+        stage('Scanning target on owasp container') {
+        steps {
+            script {
+                scan_type = "${params.SCAN_TYPE}"
+                echo "----> scan_type: $scan_type"
+                target = "${params.TARGET}"
+                if (scan_type == 'Baseline') {
+                    sh """
+                         docker exec owasp \
+                         zap-baseline.py \
+                         -t $target \
+                         -x zap_report.xml \
+                         -I
+                     """
+                } else if (scan_type == 'APIS') {
+                    sh """
+                         docker exec owasp \
+                         zap-api-scan.py \
+                         -t $target \
+                         -x zap_report.xml \
+                         -I
+                     """
+                 } else if (scan_type == 'Full') {
+                    sh """
+                         docker exec owasp \
+                         zap-full-scan.py \
+                         -t $target \
+                         -x zap_report.xml \
+                         -I
+                     """
+                 } else {
+                    echo 'Something went wrong...'
+                 }
+            }
+        }
+    }
+        stage('Copier le rapport') {
+            steps {
+                script {
+                    sh 'docker cp owasp:/zap/wrk/zap_report.xml ${WORKSPACE}/zap_report.xml'
+                   // sh 'cat ${WORKSPACE}/zap_report.xml'
+                }
+            }
+        }
+        stage('Archive Report') {
+            steps {
+                archiveArtifacts artifacts: 'zap_report.xml', allowEmptyArchive: true
+            }
+        }
+        stage('Upload to dojo') {
+            steps {
+                script {
+                    def reportPath = "${WORKSPACE}/zap_report.xml"
+                    def dojoApiUrl = "${params.DOJO_API_URL}import-scan/"
+                    def dojoApiToken = "${params.DOJO_API_TOKEN}"
+                    def engagementId = "${params.ENGAGEMENT_ID}"
+
+                    sh """
+                        curl --location '$dojoApiUrl' \\
+                        --header 'Authorization: Token $dojoApiToken' \\
+                        --form 'engagement=$engagementId' \\
+                        --form 'verified=true' \\
+                        --form 'active=true' \\
+                        --form 'lead=1' \\
+                        --form 'tags=test' \\
+                        --form 'scan_type=ZAP Scan' \\
+                        --form 'minimum_severity=Info' \\
+                        --form 'skip_duplicates=true' \\
+                        --form 'close_old_findings=false' \\
+                        --form 'file=@$reportPath'
+                    """
+                }
+            }
+        }
+    }
+    post {
+        always {
+            echo 'Nettoyage des ressources...'
+            sh 'docker stop owasp'
+            sh 'docker rm owasp'
+            cleanWs()
+        }
+    }
+}
