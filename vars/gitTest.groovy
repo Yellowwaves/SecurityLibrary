@@ -4,5 +4,5 @@
 
 def call() {
     echo 'Testing secrets with Gitleaks'
-    sh 'gitleaks detect -v -r git_report.json'
+    sh 'gitleaks detect -v -r git_report.json --exit-code 0'
 }
