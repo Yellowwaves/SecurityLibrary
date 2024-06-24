@@ -8,7 +8,7 @@ pipeline {
     parameters {
         choice(choices: ['Baseline', 'APIS', 'Full'], description: 'Type de scan à effectuer', name: 'SCAN_TYPE')
         string(defaultValue: 'https://example.com/', description: 'URL cible à scanner', name: 'TARGET')
-        string(defaultValue: 'token-api', description: 'Token API DefectDojo', name: 'DOJO_API_TOKEN')
+        string(defaultValue: 'cb59f998ac65d9c93ea9df2852ec3479766f5168', description: 'Token API DefectDojo', name: 'DOJO_API_TOKEN')
         string(defaultValue: 'http://192.168.140.130:8080/api/v2/', description: 'URL de base de l\'API DefectDojo', name: 'DOJO_API_URL')
         string(defaultValue: '3', description: 'ID de l\'engagement dans DefectDojo', name: 'ENGAGEMENT_ID')
         string(defaultValue: 'https://github.com/Yellowwaves/testSecurityPipe.git', description: 'GitHub repository URL to checkout', name: 'GIT_URL')

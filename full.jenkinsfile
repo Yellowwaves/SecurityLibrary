@@ -67,7 +67,7 @@ pipeline {
             }
             steps {
                 script {
-                def target = "${params.TARGET}"
+                target = "${params.TARGET}"
                 wpTest(target)
                 }
             }
